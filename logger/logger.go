@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/tesseract-hub/go-shared/security"
+	"github.com/Tesseract-Nexus/go-shared/security"
 )
 
 // LogLevel represents the logging level

@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tesseract-hub/go-shared/logger"
-	"github.com/tesseract-hub/go-shared/metrics"
+	"github.com/Tesseract-Nexus/go-shared/logger"
+	"github.com/Tesseract-Nexus/go-shared/metrics"
 )
 
 // Client wraps http.Client with additional functionality

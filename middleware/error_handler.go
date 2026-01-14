@@ -5,7 +5,7 @@ import (
 	"log"
 
 	"github.com/gin-gonic/gin"
-	"github.com/tesseract-hub/go-shared/errors"
+	"github.com/Tesseract-Nexus/go-shared/errors"
 )
 
 // ErrorHandler is a middleware that handles errors in a consistent way

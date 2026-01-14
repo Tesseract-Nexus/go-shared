@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/tesseract-hub/go-shared/database"
-	"github.com/tesseract-hub/go-shared/secrets"
+	"github.com/Tesseract-Nexus/go-shared/database"
+	"github.com/Tesseract-Nexus/go-shared/secrets"
 )
 
 // AppConfig holds the application configuration

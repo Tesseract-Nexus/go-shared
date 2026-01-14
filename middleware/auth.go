@@ -6,8 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/tesseract-hub/go-shared/auth"
-	"github.com/tesseract-hub/go-shared/errors"
+	"github.com/Tesseract-Nexus/go-shared/auth"
+	"github.com/Tesseract-Nexus/go-shared/errors"
 )
 
 // AuthMiddleware validates JWT tokens

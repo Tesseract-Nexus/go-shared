@@ -3,7 +3,7 @@
 //
 // Usage:
 //
-//	import "github.com/tesseract-hub/go-shared/events"
+//	import "github.com/Tesseract-Nexus/go-shared/events"
 //
 //	// Create and publish an order event
 //	event := events.NewOrderEvent(events.OrderCreated, tenantID)

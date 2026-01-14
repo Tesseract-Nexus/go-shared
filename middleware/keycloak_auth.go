@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
-	"github.com/tesseract-hub/go-shared/auth"
+	"github.com/Tesseract-Nexus/go-shared/auth"
 )
 
 // KeycloakAuthMiddleware provides JWT authentication using Keycloak

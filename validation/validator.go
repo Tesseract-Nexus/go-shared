@@ -10,7 +10,7 @@ import (
 	"unicode"
 
 	"github.com/gin-gonic/gin"
-	"github.com/tesseract-hub/go-shared/middleware"
+	"github.com/Tesseract-Nexus/go-shared/middleware"
 )
 
 // ValidationError represents a validation error for a specific field

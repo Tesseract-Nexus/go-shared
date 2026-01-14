@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/tesseract-hub/go-shared/errors"
+	"github.com/Tesseract-Nexus/go-shared/errors"
 )
 
 // StandardResponse represents a standard API response
