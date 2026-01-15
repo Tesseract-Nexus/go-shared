@@ -476,6 +476,23 @@ func BuildOktaSAMLConfig(domain, alias, displayName, entityID, metadataURL strin
 	}
 }
 
+// BuildGoogleConfig builds KeyCloak IdP config for Google OAuth
+func BuildGoogleConfig(alias, displayName, clientID, clientSecret string) IdentityProviderConfig {
+	return IdentityProviderConfig{
+		Alias:       alias,
+		DisplayName: displayName,
+		ProviderID:  "google", // Keycloak has a built-in Google provider
+		Enabled:     true,
+		TrustEmail:  true,
+		Config: map[string]string{
+			"clientId":     clientID,
+			"clientSecret": clientSecret,
+			"defaultScope": "openid email profile",
+			"syncMode":     "IMPORT",
+		},
+	}
+}
+
 // BuildIdPAlias generates a unique IdP alias for a tenant
 func BuildIdPAlias(tenantID, provider string) string {
 	// Sanitize tenant ID for use in alias
