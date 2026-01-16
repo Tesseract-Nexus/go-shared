@@ -133,10 +133,12 @@ func IstioAuth(config IstioAuthConfig) gin.HandlerFunc {
 			c.Set("user_id", authCtx.UserID)
 			c.Set("staff_id", authCtx.StaffID)
 			c.Set("tenant_id", authCtx.TenantID)
+			c.Set("tenantId", authCtx.TenantID) // camelCase for services using that convention
 			c.Set("tenant_slug", authCtx.TenantSlug)
 			c.Set("user_email", authCtx.Email) // Required for RBAC email fallback
 			if authCtx.VendorID != "" {
 				c.Set("vendor_id", authCtx.VendorID)
+				c.Set("vendorId", authCtx.VendorID) // camelCase for services using that convention
 			}
 			c.Set("roles", authCtx.Roles)
 			c.Set("is_platform_owner", authCtx.IsPlatformOwner)
@@ -163,10 +165,12 @@ func IstioAuth(config IstioAuthConfig) gin.HandlerFunc {
 				c.Set("user_id", authCtx.UserID)
 				c.Set("staff_id", authCtx.StaffID)
 				c.Set("tenant_id", authCtx.TenantID)
+				c.Set("tenantId", authCtx.TenantID) // camelCase for services using that convention
 				c.Set("tenant_slug", authCtx.TenantSlug)
 				c.Set("user_email", authCtx.Email) // Required for RBAC email fallback
 				if authCtx.VendorID != "" {
 					c.Set("vendor_id", authCtx.VendorID)
+					c.Set("vendorId", authCtx.VendorID) // camelCase for services using that convention
 				}
 			} else if config.RequireAuth {
 				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
