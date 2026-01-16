@@ -362,9 +362,19 @@ func (m *Middleware) AuditLog(action, entityType string) gin.HandlerFunc {
 // Helper methods
 
 func (m *Middleware) extractContext(c *gin.Context) (tenantID string, vendorID *string, staffID uuid.UUID) {
+	// Get tenant_id from gin context (set by auth middleware)
 	tenantID = c.GetString("tenant_id")
+	// Fallback to X-Tenant-ID header if not in context
+	// This handles cases where auth middleware hasn't set the context value
+	if tenantID == "" {
+		tenantID = c.GetHeader("X-Tenant-ID")
+	}
 
 	vendorIDStr := c.GetString("vendor_id")
+	// Fallback to X-Vendor-ID header if not in context
+	if vendorIDStr == "" {
+		vendorIDStr = c.GetHeader("X-Vendor-ID")
+	}
 	if vendorIDStr != "" {
 		vendorID = &vendorIDStr
 	}
@@ -373,6 +383,10 @@ func (m *Middleware) extractContext(c *gin.Context) (tenantID string, vendorID *
 	staffIDStr := c.GetString("staff_id")
 	if staffIDStr == "" {
 		staffIDStr = c.GetString("user_id")
+	}
+	// Fallback to X-User-ID header if not in context
+	if staffIDStr == "" {
+		staffIDStr = c.GetHeader("X-User-ID")
 	}
 	if staffIDStr != "" {
 		if parsed, err := uuid.Parse(staffIDStr); err == nil {
