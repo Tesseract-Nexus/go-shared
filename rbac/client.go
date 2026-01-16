@@ -169,8 +169,8 @@ func (c *Client) GetEffectivePermissions(ctx context.Context, tenantID string, v
 		return cached, nil
 	}
 
-	// Build request URL
-	url := fmt.Sprintf("%s/api/v1/rbac/staff/%s/effective-permissions", c.baseURL, staffID.String())
+	// Build request URL - uses internal endpoint (no auth required for service-to-service calls)
+	url := fmt.Sprintf("%s/api/v1/internal/rbac/staff/%s/effective-permissions", c.baseURL, staffID.String())
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
