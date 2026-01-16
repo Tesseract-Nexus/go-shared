@@ -173,11 +173,15 @@ func (l *Logger) WithError(err error) *Logger {
 // HTTP Logging Methods
 
 // LogRequest logs HTTP request information
+// SECURITY: Query string is sanitized to mask tokens, passwords, and PII
 func (l *Logger) LogRequest(c *gin.Context) {
+	// Sanitize the query string to mask sensitive parameters (tokens, passwords, etc.)
+	sanitizedQuery := security.SanitizeQueryString(c.Request.URL.RawQuery)
+
 	l.WithContext(c.Request.Context()).Info("HTTP request",
 		"method", c.Request.Method,
 		"path", c.Request.URL.Path,
-		"query", c.Request.URL.RawQuery,
+		"query", sanitizedQuery,
 		"remote_addr", c.ClientIP(),
 		"user_agent", c.Request.UserAgent(),
 	)

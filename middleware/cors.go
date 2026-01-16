@@ -20,6 +20,9 @@ type CORSConfig struct {
 }
 
 // DefaultCORSConfig returns a default CORS configuration
+// SECURITY: When using wildcard origin (*), AllowCredentials MUST be false
+// per CORS specification. Use ProductionCORSConfig() or EnvironmentAwareCORS()
+// for production with specific origins and credentials support.
 func DefaultCORSConfig() CORSConfig {
 	return CORSConfig{
 		AllowedOrigins: []string{"*"},
@@ -42,12 +45,15 @@ func DefaultCORSConfig() CORSConfig {
 			"X-Request-ID",
 			"X-Total-Count",
 		},
-		AllowCredentials: true,
+		// SECURITY: Must be false when AllowedOrigins contains "*"
+		// Wildcard + credentials is invalid per CORS spec
+		AllowCredentials: false,
 		MaxAge:           86400, // 24 hours
 	}
 }
 
 // ProductionCORSConfig returns a secure CORS configuration for production
+// SECURITY: Uses specific origins (not wildcard) so credentials are allowed
 func ProductionCORSConfig() CORSConfig {
 	allowedOrigins := []string{
 		"https://app.tesseract.com",
@@ -65,6 +71,8 @@ func ProductionCORSConfig() CORSConfig {
 
 	config := DefaultCORSConfig()
 	config.AllowedOrigins = allowedOrigins
+	// SECURITY: Credentials allowed because we're using specific origins, not wildcard
+	config.AllowCredentials = true
 	return config
 }
 
@@ -74,12 +82,16 @@ func CORS() gin.HandlerFunc {
 }
 
 // CORSWithConfig creates a CORS middleware with custom configuration
+// SECURITY: Enforces CORS spec - credentials header is NOT sent when using wildcard origin
 func CORSWithConfig(config CORSConfig) gin.HandlerFunc {
+	// Check if using wildcard origin
+	isWildcard := len(config.AllowedOrigins) == 1 && config.AllowedOrigins[0] == "*"
+
 	return func(c *gin.Context) {
 		origin := c.GetHeader("Origin")
 
 		// Set Access-Control-Allow-Origin
-		if len(config.AllowedOrigins) == 1 && config.AllowedOrigins[0] == "*" {
+		if isWildcard {
 			c.Header("Access-Control-Allow-Origin", "*")
 		} else if isOriginAllowed(origin, config.AllowedOrigins) {
 			c.Header("Access-Control-Allow-Origin", origin)
@@ -93,7 +105,9 @@ func CORSWithConfig(config CORSConfig) gin.HandlerFunc {
 			c.Header("Access-Control-Expose-Headers", strings.Join(config.ExposedHeaders, ", "))
 		}
 
-		if config.AllowCredentials {
+		// SECURITY: Only set credentials header if NOT using wildcard origin
+		// Per CORS spec, wildcard + credentials is invalid
+		if config.AllowCredentials && !isWildcard {
 			c.Header("Access-Control-Allow-Credentials", "true")
 		}
 
@@ -129,4 +143,23 @@ func DevelopmentCORS() gin.HandlerFunc {
 // ProductionCORS returns a secure CORS middleware for production
 func ProductionCORS() gin.HandlerFunc {
 	return CORSWithConfig(ProductionCORSConfig())
+}
+
+// EnvironmentAwareCORS returns appropriate CORS middleware based on ENVIRONMENT env var
+// SECURITY: Recommended for production services - automatically uses secure settings
+// - Development (ENVIRONMENT=development): Permissive wildcard CORS (no credentials)
+// - Production (ENVIRONMENT=production): Specific origins with credentials support
+func EnvironmentAwareCORS() gin.HandlerFunc {
+	env := os.Getenv("ENVIRONMENT")
+	if env == "" {
+		env = os.Getenv("GO_ENV")
+	}
+
+	switch strings.ToLower(env) {
+	case "production", "prod":
+		return ProductionCORS()
+	default:
+		// Development mode - permissive but secure (no credentials with wildcard)
+		return CORS()
+	}
 }

@@ -175,8 +175,58 @@ func MaskUserID(userID string) string {
 	return userID[:8] + "-****"
 }
 
+// Sensitive query parameter names that should be masked
+var sensitiveQueryParams = map[string]bool{
+	"token":               true,
+	"access_token":        true,
+	"refresh_token":       true,
+	"api_key":             true,
+	"apikey":              true,
+	"password":            true,
+	"secret":              true,
+	"code":                true,
+	"verification_code":   true,
+	"otp":                 true,
+	"auth":                true,
+	"authorization":       true,
+	"session":             true,
+	"session_id":          true,
+	"key":                 true,
+	"private_key":         true,
+}
+
+// SanitizeQueryString sanitizes URL query strings by masking sensitive parameters
+// SECURITY: This prevents tokens, passwords, and API keys from appearing in logs
+func SanitizeQueryString(queryString string) string {
+	if queryString == "" {
+		return queryString
+	}
+
+	// Parse the query string manually to handle edge cases
+	pairs := strings.Split(queryString, "&")
+	var sanitizedPairs []string
+
+	for _, pair := range pairs {
+		parts := strings.SplitN(pair, "=", 2)
+		if len(parts) == 2 {
+			paramName := strings.ToLower(parts[0])
+			if sensitiveQueryParams[paramName] {
+				sanitizedPairs = append(sanitizedPairs, parts[0]+"=[REDACTED]")
+			} else {
+				// Still apply general PII sanitization to the value
+				sanitizedPairs = append(sanitizedPairs, parts[0]+"="+SanitizeLogMessage(parts[1]))
+			}
+		} else {
+			sanitizedPairs = append(sanitizedPairs, pair)
+		}
+	}
+
+	return strings.Join(sanitizedPairs, "&")
+}
+
 // SanitizeLogMessage scans a log message for PII and masks it
 // This is a safety net for any PII that might slip through
+// SOC2 CC6.7/CC6.8: Ensures confidential data is not exposed in logs
 func SanitizeLogMessage(message string) string {
 	if message == "" {
 		return message
@@ -198,12 +248,31 @@ func SanitizeLogMessage(message string) string {
 		}
 	}
 
-	// Mask PAN numbers
+	// Mask credit/debit card numbers (13-19 digit sequences)
+	cardMatches := cardPattern.FindAllString(message, -1)
+	for _, card := range cardMatches {
+		digitsOnly := regexp.MustCompile(`[^0-9]`).ReplaceAllString(card, "")
+		// Only mask if it looks like a card number (13-19 digits, passes Luhn check optionally)
+		if len(digitsOnly) >= 13 && len(digitsOnly) <= 19 {
+			message = strings.Replace(message, card, MaskCard(card), 1)
+		}
+	}
+
+	// Mask SSN patterns (XXX-XX-XXXX)
+	message = ssnPattern.ReplaceAllString(message, RedactedSSN)
+
+	// Mask OTP/verification codes (4-8 digit sequences that look like codes)
+	// Be careful - only mask in contexts that look like verification codes
+	// We look for patterns like "code: 123456" or "otp=123456"
+	otpContextPattern := regexp.MustCompile(`(?i)(code|otp|pin|verification)[:\s=]+([0-9]{4,8})\b`)
+	message = otpContextPattern.ReplaceAllString(message, "$1: "+RedactedCode)
+
+	// Mask PAN numbers (Indian tax ID)
 	message = panPattern.ReplaceAllStringFunc(message, func(pan string) string {
 		return MaskPAN(pan)
 	})
 
-	// Mask GSTIN numbers
+	// Mask GSTIN numbers (Indian GST ID)
 	message = gstinPattern.ReplaceAllStringFunc(message, func(gstin string) string {
 		return MaskGSTIN(gstin)
 	})
@@ -227,6 +296,39 @@ type LogContext struct {
 	RequestID string
 	Operation string
 }
+
+// MaskIPAddress partially masks an IP address for logging
+// Example: 192.168.***.***
+func MaskIPAddress(ip string) string {
+	if ip == "" {
+		return ""
+	}
+
+	// Handle IPv4
+	parts := strings.Split(ip, ".")
+	if len(parts) == 4 {
+		return parts[0] + "." + parts[1] + ".***.***"
+	}
+
+	// Handle IPv6 - just show first 2 segments
+	if strings.Contains(ip, ":") {
+		parts := strings.Split(ip, ":")
+		if len(parts) >= 2 {
+			return parts[0] + ":" + parts[1] + ":****"
+		}
+	}
+
+	// Unknown format - redact
+	return "[IP_REDACTED]"
+}
+
+// Additional PII constants
+const (
+	RedactedDOB     = "[DOB_REDACTED]"
+	RedactedAccount = "[ACCOUNT_REDACTED]"
+	RedactedIP      = "[IP_REDACTED]"
+	RedactedToken   = "[TOKEN_REDACTED]"
+)
 
 // SecureLogFields creates a map of fields safe for logging
 // It automatically masks PII fields if included
@@ -255,6 +357,31 @@ func SecureLogFields(fields map[string]interface{}) map[string]interface{} {
 			}
 		case "address", "street", "street_address", "billing_address", "shipping_address":
 			safeFields[key] = RedactedAddress
+
+		// SSN and sensitive identifiers
+		case "ssn", "social_security_number", "social_security":
+			safeFields[key] = RedactedSSN
+
+		// Date of birth
+		case "dob", "date_of_birth", "birth_date", "birthdate":
+			safeFields[key] = RedactedDOB
+
+		// Bank account information
+		case "bank_account", "account_number", "routing_number", "iban", "swift":
+			safeFields[key] = RedactedAccount
+
+		// IP addresses
+		case "ip", "ip_address", "client_ip", "remote_ip", "source_ip":
+			if ip, ok := value.(string); ok {
+				safeFields[key] = MaskIPAddress(ip)
+			} else {
+				safeFields[key] = RedactedIP
+			}
+
+		// Tokens and secrets
+		case "token", "access_token", "refresh_token", "api_key", "api_token", "bearer_token":
+			safeFields[key] = RedactedToken
+
 		case "code", "verification_code", "otp", "pin", "secret":
 			safeFields[key] = RedactedCode
 		case "card", "card_number", "credit_card", "debit_card":
@@ -275,7 +402,7 @@ func SecureLogFields(fields map[string]interface{}) map[string]interface{} {
 			} else {
 				safeFields[key] = RedactedGSTIN
 			}
-		case "password", "current_password", "new_password", "old_password":
+		case "password", "current_password", "new_password", "old_password", "passwd":
 			safeFields[key] = "[REDACTED]"
 		default:
 			// For string values, sanitize the content

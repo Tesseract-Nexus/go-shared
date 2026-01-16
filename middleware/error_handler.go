@@ -55,7 +55,7 @@ func Recovery() gin.HandlerFunc {
 	return gin.CustomRecovery(func(c *gin.Context, recovered interface{}) {
 		if err, ok := recovered.(string); ok {
 			appErr := errors.NewInternalServerError(fmt.Sprintf("Panic recovered: %s", err))
-			logError(c, fmt.Errorf(err), appErr)
+			logError(c, fmt.Errorf("%s", err), appErr)
 			ErrorResponse(c, appErr)
 		} else {
 			appErr := errors.NewInternalServerError("Internal server error")

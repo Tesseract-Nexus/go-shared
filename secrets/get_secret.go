@@ -31,16 +31,42 @@ func getGlobalFetcher() (*EnvSecretFetcher, error) {
 
 // GetDBPassword is a simple drop-in function to get database password.
 // It checks GCP Secret Manager first (if enabled), then falls back to DB_PASSWORD env var.
+// SECURITY: Returns empty string if not configured - services must validate at startup.
 // Usage: password := secrets.GetDBPassword()
 func GetDBPassword() string {
-	return GetSecretOrEnv("DB_PASSWORD_SECRET_NAME", "DB_PASSWORD", "password")
+	return GetSecretOrEnv("DB_PASSWORD_SECRET_NAME", "DB_PASSWORD", "")
+}
+
+// MustGetDBPassword returns the database password or panics if not configured.
+// Use this in service startup to ensure required secrets are configured.
+// Usage: password := secrets.MustGetDBPassword()
+func MustGetDBPassword() string {
+	password := GetDBPassword()
+	if password == "" {
+		log.Fatal("SECURITY ERROR: DB_PASSWORD is required but not configured. " +
+			"Set DB_PASSWORD environment variable or configure GCP Secret Manager with DB_PASSWORD_SECRET_NAME.")
+	}
+	return password
 }
 
 // GetJWTSecret is a simple drop-in function to get JWT secret.
 // It checks GCP Secret Manager first (if enabled), then falls back to JWT_SECRET env var.
+// SECURITY: Returns empty string if not configured - services must validate at startup.
 // Usage: secret := secrets.GetJWTSecret()
 func GetJWTSecret() string {
-	return GetSecretOrEnv("JWT_SECRET_NAME", "JWT_SECRET", "default-jwt-secret")
+	return GetSecretOrEnv("JWT_SECRET_NAME", "JWT_SECRET", "")
+}
+
+// MustGetJWTSecret returns the JWT secret or panics if not configured.
+// Use this in service startup to ensure required secrets are configured.
+// Usage: secret := secrets.MustGetJWTSecret()
+func MustGetJWTSecret() string {
+	secret := GetJWTSecret()
+	if secret == "" {
+		log.Fatal("SECURITY ERROR: JWT_SECRET is required but not configured. " +
+			"Set JWT_SECRET environment variable or configure GCP Secret Manager with JWT_SECRET_NAME.")
+	}
+	return secret
 }
 
 // GetRedisPassword is a simple drop-in function to get Redis password.
@@ -68,8 +94,12 @@ func GetEncryptionKey() string {
 // from secretNameEnvVar, and falls back to the direct environment variable if GCP
 // Secret Manager is not available or the secret name is not set.
 //
+// SECURITY: If the default value is non-empty, a warning is logged. Avoid using
+// non-empty defaults for sensitive secrets in production.
+//
 // Example:
-//   password := secrets.GetSecretOrEnv("DB_PASSWORD_SECRET_NAME", "DB_PASSWORD", "default")
+//
+//	password := secrets.GetSecretOrEnv("DB_PASSWORD_SECRET_NAME", "DB_PASSWORD", "")
 //
 // If USE_GCP_SECRET_MANAGER=true and DB_PASSWORD_SECRET_NAME is set,
 // it fetches the secret from GCP. Otherwise, it uses DB_PASSWORD env var.
@@ -79,6 +109,10 @@ func GetSecretOrEnv(secretNameEnvVar, fallbackEnvVar, defaultValue string) strin
 		// GCP Secret Manager disabled, use env var directly
 		if value := os.Getenv(fallbackEnvVar); value != "" {
 			return value
+		}
+		// SECURITY: Log warning when returning a default value for important secrets
+		if defaultValue != "" {
+			log.Printf("SECURITY WARNING: Using default value for %s - this should NOT happen in production", fallbackEnvVar)
 		}
 		return defaultValue
 	}
