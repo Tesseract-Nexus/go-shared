@@ -131,7 +131,9 @@ func IstioAuth(config IstioAuthConfig) gin.HandlerFunc {
 
 			// Also set individual context values for backward compatibility
 			c.Set("user_id", authCtx.UserID)
+			c.Set("userId", authCtx.UserID) // camelCase for services using that convention
 			c.Set("staff_id", authCtx.StaffID)
+			c.Set("staffId", authCtx.StaffID) // camelCase for services using that convention
 			c.Set("tenant_id", authCtx.TenantID)
 			c.Set("tenantId", authCtx.TenantID) // camelCase for services using that convention
 			c.Set("tenant_slug", authCtx.TenantSlug)
@@ -163,7 +165,9 @@ func IstioAuth(config IstioAuthConfig) gin.HandlerFunc {
 			if authCtx != nil {
 				c.Set(AuthContextKey, authCtx)
 				c.Set("user_id", authCtx.UserID)
+				c.Set("userId", authCtx.UserID) // camelCase for services using that convention
 				c.Set("staff_id", authCtx.StaffID)
+				c.Set("staffId", authCtx.StaffID) // camelCase for services using that convention
 				c.Set("tenant_id", authCtx.TenantID)
 				c.Set("tenantId", authCtx.TenantID) // camelCase for services using that convention
 				c.Set("tenant_slug", authCtx.TenantSlug)
