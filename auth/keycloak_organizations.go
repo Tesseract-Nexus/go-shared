@@ -483,6 +483,16 @@ func BuildOrganizationAlias(tenantName string) string {
 // CreateOrganizationForTenant creates an organization configured for a Tesserix tenant
 // This is a convenience method that sets up the organization with standard attributes
 func (c *KeycloakAdminClient) CreateOrganizationForTenant(ctx context.Context, tenantID, tenantName, tenantSlug string) (string, error) {
+	return c.CreateOrganizationForTenantWithDomain(ctx, tenantID, tenantName, tenantSlug, "tesserix.app")
+}
+
+// CreateOrganizationForTenantWithDomain creates an organization configured for a Tesserix tenant
+// with a custom base domain. The domain is set to {slug}.{baseDomain}.
+func (c *KeycloakAdminClient) CreateOrganizationForTenantWithDomain(ctx context.Context, tenantID, tenantName, tenantSlug, baseDomain string) (string, error) {
+	// Keycloak 26+ requires at least one domain for organizations
+	// We use {slug}.{baseDomain} as the organization domain
+	orgDomain := fmt.Sprintf("%s.%s", tenantSlug, baseDomain)
+
 	org := OrganizationRepresentation{
 		Name:        tenantName,
 		Alias:       tenantSlug, // Use tenant slug as the organization alias
@@ -491,6 +501,12 @@ func (c *KeycloakAdminClient) CreateOrganizationForTenant(ctx context.Context, t
 		Attributes: map[string][]string{
 			"tenant_id":   {tenantID},
 			"tenant_slug": {tenantSlug},
+		},
+		Domains: []OrganizationDomainRepresentation{
+			{
+				Name:     orgDomain,
+				Verified: true, // Mark as verified since we control the domain
+			},
 		},
 	}
 
