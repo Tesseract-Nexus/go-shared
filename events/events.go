@@ -56,6 +56,7 @@ const (
 	LoginSuccess       = "auth.login_success"
 	LoginFailed        = "auth.login_failed"
 	AccountLocked      = "auth.account_locked"
+	AccountUnlocked    = "auth.account_unlocked"
 
 	// Inventory events
 	InventoryLowStock    = "inventory.low_stock"
