@@ -131,6 +131,17 @@ const (
 	TenantVerificationCompleted = "tenant.verification.completed" // Email verified, ready for password setup
 	TenantOnboardingCompleted   = "tenant.onboarding.completed"   // Full onboarding complete, send welcome pack
 
+	// Custom Domain events
+	DomainAdded             = "domain.added"              // New custom domain registered
+	DomainVerified          = "domain.verified"           // DNS verification successful
+	DomainSSLProvisioned    = "domain.ssl_provisioned"    // SSL certificate issued
+	DomainActivated         = "domain.activated"          // Domain is now live and serving traffic
+	DomainFailed            = "domain.failed"             // Domain setup failed (DNS/SSL/routing)
+	DomainRemoved           = "domain.removed"            // Domain deleted by user
+	DomainMigrated          = "domain.migrated"           // Domain migrated from built-in subdomain
+	DomainSSLExpiringSoon   = "domain.ssl_expiring_soon"  // SSL certificate expiring within 30 days
+	DomainHealthCheckFailed = "domain.health_check_failed" // Domain health check failed
+
 	// Approval events
 	ApprovalRequested = "approval.requested" // New approval request created
 	ApprovalGranted   = "approval.granted"   // Request was approved
@@ -209,6 +220,7 @@ const (
 	StreamLocation     = "LOCATION_EVENTS"
 	StreamQR           = "QR_EVENTS"
 	StreamAnalytics    = "ANALYTICS_EVENTS"
+	StreamDomains      = "DOMAIN_EVENTS"
 )
 
 // Validation errors
@@ -1020,6 +1032,9 @@ func GetStreamForSubject(subject string) string {
 	}
 	if strings.HasPrefix(subject, "analytics.") {
 		return StreamAnalytics
+	}
+	if strings.HasPrefix(subject, "domain.") {
+		return StreamDomains
 	}
 	return ""
 }
@@ -2172,5 +2187,98 @@ func NewAnalyticsEvent(eventType, tenantID string) *AnalyticsEvent {
 		},
 		Properties: make(map[string]interface{}),
 		Metadata:   make(map[string]interface{}),
+	}
+}
+
+// DomainEvent represents a custom domain event
+type DomainEvent struct {
+	BaseEvent
+
+	// Domain identification
+	DomainID   string `json:"domainId"`
+	Domain     string `json:"domain"`
+	DomainType string `json:"domainType,omitempty"` // apex, subdomain
+
+	// Tenant info
+	TenantSlug string `json:"tenantSlug,omitempty"`
+
+	// Owner info (admin who added the domain)
+	OwnerID    string `json:"ownerId,omitempty"`
+	OwnerEmail string `json:"ownerEmail,omitempty"`
+	OwnerName  string `json:"ownerName,omitempty"`
+
+	// Domain status
+	Status         string `json:"status"`                   // pending, verifying, provisioning, active, failed, deleting
+	PreviousStatus string `json:"previousStatus,omitempty"`
+	StatusMessage  string `json:"statusMessage,omitempty"`
+
+	// DNS verification
+	DNSVerified   bool   `json:"dnsVerified,omitempty"`
+	DNSVerifiedAt string `json:"dnsVerifiedAt,omitempty"`
+
+	// SSL info
+	SSLStatus     string `json:"sslStatus,omitempty"`     // pending, provisioning, active, failed, expired
+	SSLExpiresAt  string `json:"sslExpiresAt,omitempty"`
+	SSLProvider   string `json:"sslProvider,omitempty"`   // letsencrypt
+
+	// Routing info
+	RoutingStatus string `json:"routingStatus,omitempty"` // pending, active, failed
+	IsPrimary     bool   `json:"isPrimary,omitempty"`
+
+	// Target info
+	TargetType    string `json:"targetType,omitempty"` // storefront, admin
+	TargetURL     string `json:"targetUrl,omitempty"`
+
+	// Migration info (for domain.migrated events)
+	MigratedFrom  string `json:"migratedFrom,omitempty"`  // Previous subdomain (e.g., slug.tesserix.app)
+	MigratedAt    string `json:"migratedAt,omitempty"`
+
+	// Failure info
+	FailureReason string `json:"failureReason,omitempty"`
+	FailureStage  string `json:"failureStage,omitempty"` // dns_verification, ssl_provisioning, routing
+
+	// Health check info (for health_check_failed events)
+	LastHealthCheck string `json:"lastHealthCheck,omitempty"`
+	ResponseTime    int    `json:"responseTime,omitempty"` // in ms
+	HTTPStatusCode  int    `json:"httpStatusCode,omitempty"`
+
+	// URLs for customer
+	DomainURL string `json:"domainUrl,omitempty"` // Full URL (https://custom.domain.com)
+	AdminURL  string `json:"adminUrl,omitempty"`  // Admin dashboard URL
+
+	// Metadata
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// Validate validates the domain event
+func (e *DomainEvent) Validate() error {
+	if err := e.BaseEvent.Validate(); err != nil {
+		return err
+	}
+	if e.DomainID == "" && e.Domain == "" {
+		return fmt.Errorf("domain ID or domain name is required")
+	}
+	return nil
+}
+
+// GetSubject returns the NATS subject for this event
+func (e *DomainEvent) GetSubject() string {
+	return e.EventType
+}
+
+// GetStream returns the NATS stream name for this event
+func (e *DomainEvent) GetStream() string {
+	return StreamDomains
+}
+
+// NewDomainEvent creates a new domain event with base fields populated
+func NewDomainEvent(eventType, tenantID string) *DomainEvent {
+	return &DomainEvent{
+		BaseEvent: BaseEvent{
+			EventType: eventType,
+			TenantID:  tenantID,
+			Timestamp: time.Now().UTC(),
+		},
+		Metadata: make(map[string]interface{}),
 	}
 }

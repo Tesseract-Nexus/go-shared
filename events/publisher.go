@@ -269,6 +269,11 @@ func (p *Publisher) PublishProduct(ctx context.Context, event *ProductEvent) err
 	return p.Publish(ctx, event)
 }
 
+// PublishDomain is a convenience method for publishing domain events
+func (p *Publisher) PublishDomain(ctx context.Context, event *DomainEvent) error {
+	return p.Publish(ctx, event)
+}
+
 // IsConnected returns true if connected to NATS
 func (p *Publisher) IsConnected() bool {
 	p.mu.RLock()
@@ -352,6 +357,7 @@ func (p *Publisher) EnsureAllStreams(ctx context.Context) error {
 		StreamApprovals:  {"approval.>"},
 		StreamCategories: {"category.>"},
 		StreamShipping:   {"shipping.>"},
+		StreamDomains:    {"domain.>"},
 	}
 
 	for name, subjects := range streams {
