@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 // BaseRepository implements the Repository interface using GORM

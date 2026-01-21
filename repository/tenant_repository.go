@@ -125,7 +125,9 @@ func (r *TenantBaseRepository[T]) ExistsForTenant(ctx context.Context, tenantID 
 }
 
 // WithTransaction returns a new tenant repository instance with the given transaction
-func (r *TenantBaseRepository[T]) WithTransaction(tx *gorm.DB) TenantRepository[T] {
+// Note: Returns Repository[T] to satisfy the interface, but the underlying type is still TenantBaseRepository.
+// Use type assertion to access tenant-specific methods in transaction: repo.WithTransaction(tx).(TenantRepository[T])
+func (r *TenantBaseRepository[T]) WithTransaction(tx *gorm.DB) Repository[T] {
 	newRepo := *r
 	newRepo.BaseRepository = newRepo.BaseRepository.WithTransaction(tx).(*BaseRepository[T])
 	return &newRepo

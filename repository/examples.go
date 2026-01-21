@@ -1,3 +1,10 @@
+//go:build examples
+// +build examples
+
+// This file contains example code showing repository usage patterns.
+// It is excluded from normal builds due to the build constraint above.
+// Run tests with -tags=examples to include this file.
+
 package repository
 
 import (

@@ -311,13 +311,11 @@ func (qb *QueryBuilderImpl[T]) Min(column string) (interface{}, error) {
 
 // FindInBatches processes records in batches
 func (qb *QueryBuilderImpl[T]) FindInBatches(batchSize int, fn func([]T) error) error {
-	return qb.query.FindInBatches(&[]T{}, batchSize, func(tx *gorm.DB, batch int) error {
-		var entities []T
-		if err := tx.Find(&entities).Error; err != nil {
-			return err
-		}
+	var entities []T
+	result := qb.query.FindInBatches(&entities, batchSize, func(tx *gorm.DB, batch int) error {
 		return fn(entities)
 	})
+	return result.Error
 }
 
 // Clone creates a copy of the query builder
@@ -332,10 +330,11 @@ func (qb *QueryBuilderImpl[T]) Clone() QueryBuilder[T] {
 
 // ToSQL returns the SQL query and arguments
 func (qb *QueryBuilderImpl[T]) ToSQL() (string, []interface{}) {
-	return qb.query.ToSQL(func(tx *gorm.DB) *gorm.DB {
-		var entities []T
-		return tx.Find(&entities)
-	})
+	// Create a dry-run session to get the SQL without executing
+	stmt := qb.query.Session(&gorm.Session{DryRun: true}).Statement
+	var entities []T
+	qb.query.Session(&gorm.Session{DryRun: true}).Find(&entities)
+	return stmt.SQL.String(), stmt.Vars
 }
 
 // Explain executes EXPLAIN on the query

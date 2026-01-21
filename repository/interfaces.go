@@ -243,10 +243,11 @@ type RepositoryConfig struct {
 }
 
 // RepositoryFactory creates repository instances
+// Note: Go does not support generic methods on interfaces, so factory methods
+// are provided as package-level functions: CreateRepository[T], CreateTenantRepository[T], etc.
 type RepositoryFactory interface {
-	CreateRepository[T Entity](config RepositoryConfig) Repository[T]
-	CreateTenantRepository[T Entity](config RepositoryConfig) TenantRepository[T]
-	CreateReadOnlyRepository[T Entity](config RepositoryConfig) ReadOnlyRepository[T]
+	// GetDB returns the underlying database connection for creating repositories
+	GetDB() *gorm.DB
 }
 
 // TransactionManager handles database transactions
