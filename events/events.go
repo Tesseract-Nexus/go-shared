@@ -2213,8 +2213,12 @@ type DomainEvent struct {
 	StatusMessage  string `json:"statusMessage,omitempty"`
 
 	// DNS verification
-	DNSVerified   bool   `json:"dnsVerified,omitempty"`
-	DNSVerifiedAt string `json:"dnsVerifiedAt,omitempty"`
+	DNSVerified       bool   `json:"dnsVerified,omitempty"`
+	DNSVerifiedAt     string `json:"dnsVerifiedAt,omitempty"`
+	VerificationToken string `json:"verificationToken,omitempty"` // Token for DNS TXT verification
+	DNSRecordType     string `json:"dnsRecordType,omitempty"`     // CNAME, A, TXT
+	DNSRecordName     string `json:"dnsRecordName,omitempty"`     // Record name to add
+	DNSRecordValue    string `json:"dnsRecordValue,omitempty"`    // Record value to add
 
 	// SSL info
 	SSLStatus     string `json:"sslStatus,omitempty"`     // pending, provisioning, active, failed, expired
@@ -2224,17 +2228,22 @@ type DomainEvent struct {
 	// Routing info
 	RoutingStatus string `json:"routingStatus,omitempty"` // pending, active, failed
 	IsPrimary     bool   `json:"isPrimary,omitempty"`
+	RoutingTarget string `json:"routingTarget,omitempty"` // Target service/endpoint for routing
+	RoutingPath   string `json:"routingPath,omitempty"`   // Path prefix if any
 
 	// Target info
 	TargetType    string `json:"targetType,omitempty"` // storefront, admin
 	TargetURL     string `json:"targetUrl,omitempty"`
 
 	// Migration info (for domain.migrated events)
-	MigratedFrom  string `json:"migratedFrom,omitempty"`  // Previous subdomain (e.g., slug.tesserix.app)
-	MigratedAt    string `json:"migratedAt,omitempty"`
+	MigratedFrom    string `json:"migratedFrom,omitempty"`    // Previous subdomain (e.g., slug.tesserix.app)
+	MigratedTo      string `json:"migratedTo,omitempty"`      // New infrastructure/target
+	MigratedAt      string `json:"migratedAt,omitempty"`
+	MigrationReason string `json:"migrationReason,omitempty"` // Reason for migration
 
 	// Failure info
 	FailureReason string `json:"failureReason,omitempty"`
+	FailureCode   string `json:"failureCode,omitempty"`   // Error code for troubleshooting
 	FailureStage  string `json:"failureStage,omitempty"` // dns_verification, ssl_provisioning, routing
 
 	// Health check info (for health_check_failed events)
