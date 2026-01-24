@@ -364,20 +364,13 @@ func (m *Middleware) AuditLog(action, entityType string) gin.HandlerFunc {
 func (m *Middleware) extractContext(c *gin.Context) (tenantID string, vendorID *string, staffID uuid.UUID) {
 	// Get tenant_id from gin context (set by auth middleware)
 	tenantID = c.GetString("tenant_id")
-	// Fallback to headers if not in context
-	// This handles BFF calls that bypass Istio ingress
+	// Fallback to Istio JWT claim header (set by Istio or BFF)
 	if tenantID == "" {
-		tenantID = c.GetHeader("X-Tenant-ID")
-	}
-	if tenantID == "" {
-		tenantID = c.GetHeader("x-jwt-claim-tenant-id") // BFF forwards JWT claims here
+		tenantID = c.GetHeader("x-jwt-claim-tenant-id")
 	}
 
 	vendorIDStr := c.GetString("vendor_id")
-	// Fallback to X-Vendor-ID header if not in context
-	if vendorIDStr == "" {
-		vendorIDStr = c.GetHeader("X-Vendor-ID")
-	}
+	// Fallback to Istio JWT claim header for vendor
 	if vendorIDStr == "" {
 		vendorIDStr = c.GetHeader("x-jwt-claim-vendor-id")
 	}
@@ -390,12 +383,9 @@ func (m *Middleware) extractContext(c *gin.Context) (tenantID string, vendorID *
 	if staffIDStr == "" {
 		staffIDStr = c.GetString("user_id")
 	}
-	// Fallback to headers for BFF calls that bypass Istio
+	// Fallback to Istio JWT claim header for user ID
 	if staffIDStr == "" {
-		staffIDStr = c.GetHeader("X-User-ID")
-	}
-	if staffIDStr == "" {
-		staffIDStr = c.GetHeader("x-jwt-claim-sub") // BFF forwards JWT sub claim here
+		staffIDStr = c.GetHeader("x-jwt-claim-sub")
 	}
 	if staffIDStr != "" {
 		if parsed, err := uuid.Parse(staffIDStr); err == nil {
@@ -424,10 +414,6 @@ func (m *Middleware) buildContext(c *gin.Context) context.Context {
 	// may not match the staff-service staff ID directly
 	userEmail := c.GetString("user_email")
 	if userEmail == "" {
-		userEmail = c.GetHeader("X-User-Email")
-	}
-	if userEmail == "" {
-		// Also check Istio JWT claim header
 		userEmail = c.GetHeader("x-jwt-claim-email")
 	}
 

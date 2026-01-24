@@ -177,10 +177,10 @@ func (c *Client) GetEffectivePermissions(ctx context.Context, tenantID string, v
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	// Add tenant header
-	req.Header.Set("X-Tenant-ID", tenantID)
+	// Add tenant header (Istio-style headers for consistency)
+	req.Header.Set("x-jwt-claim-tenant-id", tenantID)
 	if vendorID != nil {
-		req.Header.Set("X-Vendor-ID", *vendorID)
+		req.Header.Set("x-jwt-claim-vendor-id", *vendorID)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
@@ -194,7 +194,7 @@ func (c *Client) GetEffectivePermissions(ctx context.Context, tenantID string, v
 	// Forward user email if present in context (for email-based staff lookup fallback)
 	if email := ctx.Value(ContextKeyUserEmail); email != nil {
 		if emailStr, ok := email.(string); ok && emailStr != "" {
-			req.Header.Set("X-User-Email", emailStr)
+			req.Header.Set("x-jwt-claim-email", emailStr)
 		}
 	}
 
@@ -236,7 +236,7 @@ func (c *Client) GetStaffInfo(ctx context.Context, tenantID string, staffID uuid
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.Header.Set("X-Tenant-ID", tenantID)
+	req.Header.Set("x-jwt-claim-tenant-id", tenantID)
 	req.Header.Set("Content-Type", "application/json")
 
 	if token := ctx.Value(AuthTokenContextKey); token != nil {

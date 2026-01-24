@@ -84,7 +84,7 @@ func (c *ApprovalClient) CheckApproval(ctx context.Context, tenantID string, aut
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("X-Tenant-ID", tenantID)
+	httpReq.Header.Set("x-jwt-claim-tenant-id", tenantID)
 	if authToken != "" {
 		httpReq.Header.Set("Authorization", "Bearer "+authToken)
 	}
@@ -120,7 +120,7 @@ func (c *ApprovalClient) CreateRequest(ctx context.Context, tenantID string, aut
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("X-Tenant-ID", tenantID)
+	httpReq.Header.Set("x-jwt-claim-tenant-id", tenantID)
 	if authToken != "" {
 		httpReq.Header.Set("Authorization", "Bearer "+authToken)
 	}
