@@ -368,13 +368,18 @@ var RoleToPermissions = map[string][]string{
 		// Owner has all permissions (including billing, settings, etc.)
 		PermissionOrdersAll, PermissionProductsAll, PermissionCatalogAll, PermissionStaffAll,
 		PermissionPaymentsAll, PermissionCustomersAll, PermissionAnalyticsAll,
-		PermissionSettingsAll, PermissionStorefrontsAll, PermissionApprovalsManage,
+		PermissionSettingsAll, PermissionStorefrontsAll,
+		// Approval permissions - owner can manage all approvals
+		PermissionApprovalsManage, PermissionApprovalsRead, PermissionApprovalsCreate,
+		PermissionApprovalsApprove, PermissionApprovalsReject,
 	},
 	"admin": {
 		// Admin has most permissions except billing
 		PermissionOrdersAll, PermissionProductsAll, PermissionCatalogAll, PermissionStaffRead,
 		PermissionStaffInvite, PermissionPaymentsRead, PermissionPaymentsRefund,
-		PermissionCustomersAll, PermissionAnalyticsAll, PermissionApprovalsApprove,
+		PermissionCustomersAll, PermissionAnalyticsAll,
+		// Approval permissions - admin can approve and reject
+		PermissionApprovalsRead, PermissionApprovalsApprove, PermissionApprovalsReject,
 	},
 	"manager": {
 		// Manager can manage day-to-day operations
