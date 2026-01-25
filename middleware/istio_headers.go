@@ -37,6 +37,12 @@ type AuthContext struct {
 	// Email from the JWT
 	Email string `json:"email"`
 
+	// Username is the preferred_username from Keycloak (for display)
+	Username string `json:"username,omitempty"`
+
+	// Name is the full name from Keycloak (name claim)
+	Name string `json:"name,omitempty"`
+
 	// TenantID is the tenant UUID
 	TenantID string `json:"tenant_id"`
 
@@ -138,6 +144,15 @@ func IstioAuth(config IstioAuthConfig) gin.HandlerFunc {
 			c.Set("tenantId", authCtx.TenantID) // camelCase for services using that convention
 			c.Set("tenant_slug", authCtx.TenantSlug)
 			c.Set("user_email", authCtx.Email) // Required for RBAC email fallback
+			// Set username for audit logging - prefer name, then preferred_username, then email
+			username := authCtx.Name
+			if username == "" {
+				username = authCtx.Username
+			}
+			if username == "" {
+				username = authCtx.Email
+			}
+			c.Set("username", username)
 			if authCtx.VendorID != "" {
 				c.Set("vendor_id", authCtx.VendorID)
 				c.Set("vendorId", authCtx.VendorID) // camelCase for services using that convention
@@ -172,6 +187,12 @@ func IstioAuth(config IstioAuthConfig) gin.HandlerFunc {
 				c.Set("tenantId", authCtx.TenantID) // camelCase for services using that convention
 				c.Set("tenant_slug", authCtx.TenantSlug)
 				c.Set("user_email", authCtx.Email) // Required for RBAC email fallback
+				// Set username for audit logging - prefer email for legacy
+				username := authCtx.Email
+				if username == "" {
+					username = authCtx.UserID
+				}
+				c.Set("username", username)
 				if authCtx.VendorID != "" {
 					c.Set("vendor_id", authCtx.VendorID)
 					c.Set("vendorId", authCtx.VendorID) // camelCase for services using that convention
@@ -196,6 +217,8 @@ func parseIstioHeaders(c *gin.Context) *AuthContext {
 	// Extract each claim from headers
 	authCtx.UserID = c.GetHeader("x-jwt-claim-sub")
 	authCtx.Email = c.GetHeader("x-jwt-claim-email")
+	authCtx.Username = c.GetHeader("x-jwt-claim-preferred-username")
+	authCtx.Name = c.GetHeader("x-jwt-claim-name")
 	authCtx.TenantID = c.GetHeader("x-jwt-claim-tenant-id")
 	authCtx.TenantSlug = c.GetHeader("x-jwt-claim-tenant-slug")
 	authCtx.StaffID = c.GetHeader("x-jwt-claim-staff-id")
