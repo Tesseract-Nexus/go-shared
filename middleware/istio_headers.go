@@ -571,6 +571,7 @@ func RequireVendorMatch(vendorIDParam string) gin.HandlerFunc {
 func getPrimaryRole(roles []string) string {
 	rolePriority := map[string]int{
 		"owner":       100,
+		"store_owner": 95,
 		"super_admin": 90,
 		"admin":       80,
 		"manager":     70,
