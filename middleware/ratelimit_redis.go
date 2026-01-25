@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -227,17 +228,29 @@ func (r *RedisRateLimiter) buildIdentifier(c *gin.Context) string {
 // getClientIP extracts the client IP from various headers
 func getClientIP(c *gin.Context) string {
 	// Check various headers in order of preference
+	// X-Forwarded-For may contain multiple IPs: "client, proxy1, proxy2" - take the first
+	if xff := c.GetHeader("X-Forwarded-For"); xff != "" {
+		ips := strings.Split(xff, ",")
+		if len(ips) > 0 {
+			clientIP := strings.TrimSpace(ips[0])
+			if clientIP != "" {
+				return clientIP
+			}
+		}
+	}
+
+	// Check other common proxy headers
 	headers := []string{
-		"X-Forwarded-For",
 		"X-Real-IP",
-		"CF-Connecting-IP",
-		"X-Vercel-Forwarded-For",
+		"X-Envoy-External-Address", // Istio/Envoy
+		"CF-Connecting-IP",         // Cloudflare
+		"X-Vercel-Forwarded-For",   // Vercel
 	}
 
 	for _, header := range headers {
 		ip := c.GetHeader(header)
 		if ip != "" {
-			return ip
+			return strings.TrimSpace(ip)
 		}
 	}
 

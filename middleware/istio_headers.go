@@ -498,8 +498,9 @@ func GetActorInfo(c *gin.Context) ActorInfo {
 		actor.ActorName = actor.ActorEmail
 	}
 
-	// Get client IP - Gin's ClientIP() handles X-Forwarded-For, X-Real-IP, etc.
-	actor.ClientIP = c.ClientIP()
+	// Get client IP - check proxy headers first since Gin's ClientIP() requires trusted proxies config
+	// Priority: X-Forwarded-For > X-Real-IP > X-Envoy-External-Address > Gin's ClientIP()
+	actor.ClientIP = getClientIP(c)
 
 	// Get User-Agent for additional context
 	actor.UserAgent = c.GetHeader("User-Agent")
