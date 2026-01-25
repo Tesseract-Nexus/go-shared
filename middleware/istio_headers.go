@@ -144,6 +144,7 @@ func IstioAuth(config IstioAuthConfig) gin.HandlerFunc {
 			c.Set("tenantId", authCtx.TenantID) // camelCase for services using that convention
 			c.Set("tenant_slug", authCtx.TenantSlug)
 			c.Set("user_email", authCtx.Email) // Required for RBAC email fallback
+			c.Set("userEmail", authCtx.Email) // camelCase for services using that convention
 			// Set username for audit logging - prefer name, then preferred_username, then email
 			username := authCtx.Name
 			if username == "" {
@@ -153,6 +154,7 @@ func IstioAuth(config IstioAuthConfig) gin.HandlerFunc {
 				username = authCtx.Email
 			}
 			c.Set("username", username)
+			c.Set("userName", username) // camelCase for services using that convention
 			if authCtx.VendorID != "" {
 				c.Set("vendor_id", authCtx.VendorID)
 				c.Set("vendorId", authCtx.VendorID) // camelCase for services using that convention
@@ -187,12 +189,14 @@ func IstioAuth(config IstioAuthConfig) gin.HandlerFunc {
 				c.Set("tenantId", authCtx.TenantID) // camelCase for services using that convention
 				c.Set("tenant_slug", authCtx.TenantSlug)
 				c.Set("user_email", authCtx.Email) // Required for RBAC email fallback
+				c.Set("userEmail", authCtx.Email) // camelCase for services using that convention
 				// Set username for audit logging - prefer email for legacy
 				username := authCtx.Email
 				if username == "" {
 					username = authCtx.UserID
 				}
 				c.Set("username", username)
+				c.Set("userName", username) // camelCase for services using that convention
 				if authCtx.VendorID != "" {
 					c.Set("vendor_id", authCtx.VendorID)
 					c.Set("vendorId", authCtx.VendorID) // camelCase for services using that convention
