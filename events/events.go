@@ -107,12 +107,17 @@ const (
 	// Support ticket events
 	TicketCreated        = "ticket.created"
 	TicketUpdated        = "ticket.updated"
+	TicketDeleted        = "ticket.deleted"
 	TicketAssigned       = "ticket.assigned"
+	TicketUnassigned     = "ticket.unassigned"
 	TicketStatusChanged  = "ticket.status_changed"
 	TicketCommentAdded   = "ticket.comment_added"
+	TicketCommentUpdated = "ticket.comment_updated"
+	TicketCommentDeleted = "ticket.comment_deleted"
 	TicketResolved       = "ticket.resolved"
 	TicketClosed         = "ticket.closed"
 	TicketReopened       = "ticket.reopened"
+	TicketEscalated      = "ticket.escalated"
 
 	// Staff events
 	StaffCreated     = "staff.created"
@@ -1288,6 +1293,15 @@ type TicketEvent struct {
 	FirstResponseAt string `json:"firstResponseAt,omitempty"`
 	SLADueAt        string `json:"slaDueAt,omitempty"`
 	SLABreached     bool   `json:"slaBreached,omitempty"`
+
+	// Actor information (for audit logging)
+	ActorID    string `json:"actorId,omitempty"`
+	ActorName  string `json:"actorName,omitempty"`
+	ActorEmail string `json:"actorEmail,omitempty"`
+
+	// Request context for audit trail
+	ClientIP  string `json:"clientIp,omitempty"`
+	UserAgent string `json:"userAgent,omitempty"`
 
 	// Metadata
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
