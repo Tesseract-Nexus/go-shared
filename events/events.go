@@ -1657,6 +1657,10 @@ type ProductEvent struct {
 	ActorName  string `json:"actorName,omitempty"`
 	ActorEmail string `json:"actorEmail,omitempty"`
 
+	// Request context for audit trail
+	ClientIP  string `json:"clientIp,omitempty"`
+	UserAgent string `json:"userAgent,omitempty"`
+
 	// Change details
 	ChangeType  string                 `json:"changeType,omitempty"` // created, updated, deleted, published, archived
 	OldValue    map[string]interface{} `json:"oldValue,omitempty"`

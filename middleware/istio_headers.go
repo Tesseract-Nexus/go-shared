@@ -448,7 +448,7 @@ func GetVendorScopeFilter(c *gin.Context) string {
 	return ""
 }
 
-// ActorInfo contains user identity information for audit logging and event publishing
+// ActorInfo contains user identity and request information for audit logging and event publishing
 // Use GetActorInfo() to extract this from the request context
 type ActorInfo struct {
 	// ActorID is the user's UUID (from JWT sub claim)
@@ -460,6 +460,13 @@ type ActorInfo struct {
 
 	// ActorEmail is the user's email address
 	ActorEmail string
+
+	// ClientIP is the client's IP address (from X-Forwarded-For or direct connection)
+	// Used for audit logging and security tracking
+	ClientIP string
+
+	// UserAgent is the client's User-Agent header
+	UserAgent string
 }
 
 // GetActorInfo extracts actor information from the Gin context for audit event publishing
@@ -468,7 +475,7 @@ type ActorInfo struct {
 // Usage in handlers:
 //
 //	actor := middleware.GetActorInfo(c)
-//	_ = h.eventsPublisher.PublishProductCreated(ctx, product, tenantID, actor.ActorID, actor.ActorName, actor.ActorEmail)
+//	_ = h.eventsPublisher.PublishProductCreated(ctx, product, tenantID, actor.ActorID, actor.ActorName, actor.ActorEmail, actor.ClientIP)
 func GetActorInfo(c *gin.Context) ActorInfo {
 	actor := ActorInfo{}
 
@@ -490,6 +497,12 @@ func GetActorInfo(c *gin.Context) ActorInfo {
 	if actor.ActorName == "" && actor.ActorEmail != "" {
 		actor.ActorName = actor.ActorEmail
 	}
+
+	// Get client IP - Gin's ClientIP() handles X-Forwarded-For, X-Real-IP, etc.
+	actor.ClientIP = c.ClientIP()
+
+	// Get User-Agent for additional context
+	actor.UserAgent = c.GetHeader("User-Agent")
 
 	return actor
 }
