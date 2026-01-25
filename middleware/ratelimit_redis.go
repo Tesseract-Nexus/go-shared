@@ -232,12 +232,24 @@ func getClientIP(c *gin.Context) string {
 	xri := c.GetHeader("X-Real-IP")
 	xea := c.GetHeader("X-Envoy-External-Address")
 	cfip := c.GetHeader("CF-Connecting-IP")
+	xrci := c.GetHeader("X-Real-Client-IP")
 	ginIP := c.ClientIP()
 
 	// Log headers for debugging (will appear in service logs)
 	if c.Request != nil && c.Request.URL != nil && strings.Contains(c.Request.URL.Path, "product") {
-		fmt.Printf("[DEBUG-IP] XFF=%s, X-Real-IP=%s, X-Envoy-External=%s, CF-IP=%s, GinClientIP=%s, Path=%s\n",
-			xff, xri, xea, cfip, ginIP, c.Request.URL.Path)
+		fmt.Printf("[DEBUG-IP] X-Real-Client-IP=%s, XFF=%s, X-Real-IP=%s, X-Envoy-External=%s, CF-IP=%s, GinClientIP=%s, Path=%s\n",
+			xrci, xff, xri, xea, cfip, ginIP, c.Request.URL.Path)
+	}
+	// Check X-Real-Client-IP first (set by our Lua EnvoyFilter at gateway)
+	if xrci != "" {
+		// Remove port if present (e.g., "1.2.3.4:12345" -> "1.2.3.4")
+		if idx := strings.LastIndex(xrci, ":"); idx > 0 {
+			// Check if it's IPv6 (contains multiple colons) or IPv4 with port
+			if strings.Count(xrci, ":") == 1 {
+				xrci = xrci[:idx]
+			}
+		}
+		return strings.TrimSpace(xrci)
 	}
 
 	// Check various headers in order of preference
