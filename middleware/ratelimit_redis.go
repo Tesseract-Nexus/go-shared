@@ -227,9 +227,22 @@ func (r *RedisRateLimiter) buildIdentifier(c *gin.Context) string {
 
 // getClientIP extracts the client IP from various headers
 func getClientIP(c *gin.Context) string {
+	// Debug: Log all relevant headers for troubleshooting
+	xff := c.GetHeader("X-Forwarded-For")
+	xri := c.GetHeader("X-Real-IP")
+	xea := c.GetHeader("X-Envoy-External-Address")
+	cfip := c.GetHeader("CF-Connecting-IP")
+	ginIP := c.ClientIP()
+
+	// Log headers for debugging (will appear in service logs)
+	if c.Request != nil && c.Request.URL != nil && strings.Contains(c.Request.URL.Path, "product") {
+		fmt.Printf("[DEBUG-IP] XFF=%s, X-Real-IP=%s, X-Envoy-External=%s, CF-IP=%s, GinClientIP=%s, Path=%s\n",
+			xff, xri, xea, cfip, ginIP, c.Request.URL.Path)
+	}
+
 	// Check various headers in order of preference
 	// X-Forwarded-For may contain multiple IPs: "client, proxy1, proxy2" - take the first
-	if xff := c.GetHeader("X-Forwarded-For"); xff != "" {
+	if xff != "" {
 		ips := strings.Split(xff, ",")
 		if len(ips) > 0 {
 			clientIP := strings.TrimSpace(ips[0])
@@ -240,21 +253,17 @@ func getClientIP(c *gin.Context) string {
 	}
 
 	// Check other common proxy headers
-	headers := []string{
-		"X-Real-IP",
-		"X-Envoy-External-Address", // Istio/Envoy
-		"CF-Connecting-IP",         // Cloudflare
-		"X-Vercel-Forwarded-For",   // Vercel
+	if xri != "" {
+		return strings.TrimSpace(xri)
+	}
+	if xea != "" {
+		return strings.TrimSpace(xea)
+	}
+	if cfip != "" {
+		return strings.TrimSpace(cfip)
 	}
 
-	for _, header := range headers {
-		ip := c.GetHeader(header)
-		if ip != "" {
-			return strings.TrimSpace(ip)
-		}
-	}
-
-	return c.ClientIP()
+	return ginIP
 }
 
 // isExcludedPath checks if the path should bypass rate limiting
