@@ -238,7 +238,11 @@ func parseIstioHeaders(c *gin.Context) *AuthContext {
 	authCtx.VendorID = c.GetHeader("x-jwt-claim-vendor-id")
 
 	// Parse roles (JSON array in header)
+	// Check both x-jwt-claim-roles and x-jwt-claim-realm-roles (Keycloak format)
 	rolesHeader := c.GetHeader("x-jwt-claim-roles")
+	if rolesHeader == "" {
+		rolesHeader = c.GetHeader("x-jwt-claim-realm-roles")
+	}
 	if rolesHeader != "" {
 		// Istio may encode arrays as JSON strings
 		if strings.HasPrefix(rolesHeader, "[") {
