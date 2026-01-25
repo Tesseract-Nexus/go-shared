@@ -160,6 +160,10 @@ func IstioAuth(config IstioAuthConfig) gin.HandlerFunc {
 				c.Set("vendorId", authCtx.VendorID) // camelCase for services using that convention
 			}
 			c.Set("roles", authCtx.Roles)
+			// Set userRole for backward compatibility with services checking single role
+			userRole := getPrimaryRole(authCtx.Roles)
+			c.Set("userRole", userRole)
+			c.Set("user_role", userRole)
 			c.Set("is_platform_owner", authCtx.IsPlatformOwner)
 
 			c.Next()
@@ -201,6 +205,10 @@ func IstioAuth(config IstioAuthConfig) gin.HandlerFunc {
 					c.Set("vendor_id", authCtx.VendorID)
 					c.Set("vendorId", authCtx.VendorID) // camelCase for services using that convention
 				}
+				// Set userRole for backward compatibility with services checking single role
+				userRole := getPrimaryRole(authCtx.Roles)
+				c.Set("userRole", userRole)
+				c.Set("user_role", userRole)
 			} else if config.RequireAuth {
 				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 					"error":   "unauthorized",
@@ -552,4 +560,36 @@ func RequireVendorMatch(vendorIDParam string) gin.HandlerFunc {
 
 		c.Next()
 	}
+}
+
+// getPrimaryRole returns the highest priority role from a list of roles
+// Priority: owner > super_admin > admin > manager > staff > customer > viewer
+func getPrimaryRole(roles []string) string {
+	rolePriority := map[string]int{
+		"owner":       100,
+		"super_admin": 90,
+		"admin":       80,
+		"manager":     70,
+		"staff":       60,
+		"customer":    40,
+		"viewer":      30,
+	}
+
+	highestPriority := -1
+	highestRole := ""
+
+	for _, role := range roles {
+		roleLower := strings.ToLower(role)
+		if priority, ok := rolePriority[roleLower]; ok {
+			if priority > highestPriority {
+				highestPriority = priority
+				highestRole = role
+			}
+		} else if highestRole == "" {
+			// If no priority match, use the first role as fallback
+			highestRole = role
+		}
+	}
+
+	return highestRole
 }
