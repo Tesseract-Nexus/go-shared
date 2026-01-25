@@ -448,6 +448,52 @@ func GetVendorScopeFilter(c *gin.Context) string {
 	return ""
 }
 
+// ActorInfo contains user identity information for audit logging and event publishing
+// Use GetActorInfo() to extract this from the request context
+type ActorInfo struct {
+	// ActorID is the user's UUID (from JWT sub claim)
+	ActorID string
+
+	// ActorName is the display name for audit logs
+	// Priority: name claim > preferred_username claim > email > user_id
+	ActorName string
+
+	// ActorEmail is the user's email address
+	ActorEmail string
+}
+
+// GetActorInfo extracts actor information from the Gin context for audit event publishing
+// This is the standard way for all services to get user identity for NATS events
+//
+// Usage in handlers:
+//
+//	actor := middleware.GetActorInfo(c)
+//	_ = h.eventsPublisher.PublishProductCreated(ctx, product, tenantID, actor.ActorID, actor.ActorName, actor.ActorEmail)
+func GetActorInfo(c *gin.Context) ActorInfo {
+	actor := ActorInfo{}
+
+	// Get user ID (UUID)
+	actor.ActorID = c.GetString("user_id")
+
+	// Get email
+	if email, exists := c.Get("user_email"); exists && email != nil {
+		actor.ActorEmail = email.(string)
+	}
+
+	// Get display name - the middleware already sets "username" with proper fallback
+	if username, exists := c.Get("username"); exists && username != nil {
+		actor.ActorName = username.(string)
+	}
+
+	// Final fallback: if actorName is still empty, use email
+	// This handles edge cases where username context wasn't set
+	if actor.ActorName == "" && actor.ActorEmail != "" {
+		actor.ActorName = actor.ActorEmail
+	}
+
+	return actor
+}
+
 // RequireVendorMatch middleware that ensures the request can access the specified vendor
 // Use this for endpoints like GET /vendors/{vendorId}/products to validate access
 // vendorIDParam is the name of the URL parameter containing the vendor ID
