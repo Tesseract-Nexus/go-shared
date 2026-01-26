@@ -36,6 +36,15 @@ const (
 	PermissionPaymentsFeesManage    = "payments:fees:manage"
 )
 
+// Payment Methods Configuration permissions
+// Granular permissions for multi-region payment methods management
+const (
+	PermissionPaymentsMethodsView   = "payments:methods:view"   // View available payment methods and configs
+	PermissionPaymentsMethodsEnable = "payments:methods:enable" // Enable/disable payment methods for the store
+	PermissionPaymentsMethodsConfig = "payments:methods:config" // Configure credentials (Owner only - sensitive)
+	PermissionPaymentsMethodsTest   = "payments:methods:test"   // Test payment method connections
+)
+
 // Products permissions - uses catalog:products:* format from database
 const (
 	PermissionProductsRead    = "catalog:products:view"
@@ -375,6 +384,9 @@ var RoleToPermissions = map[string][]string{
 		PermissionApprovalsApprove, PermissionApprovalsReject,
 		// Customer lock permission
 		PermissionCustomersLock,
+		// Payment methods - owner has full access including credential configuration
+		PermissionPaymentsMethodsView, PermissionPaymentsMethodsEnable,
+		PermissionPaymentsMethodsConfig, PermissionPaymentsMethodsTest,
 	},
 	"admin": {
 		// Admin has most permissions except billing
@@ -385,6 +397,8 @@ var RoleToPermissions = map[string][]string{
 		PermissionApprovalsRead, PermissionApprovalsApprove, PermissionApprovalsReject,
 		// Customer lock permission
 		PermissionCustomersLock,
+		// Payment methods - admin can view, enable/disable, and test (NOT configure credentials)
+		PermissionPaymentsMethodsView, PermissionPaymentsMethodsEnable, PermissionPaymentsMethodsTest,
 	},
 	"manager": {
 		// Manager can manage day-to-day operations
@@ -392,6 +406,8 @@ var RoleToPermissions = map[string][]string{
 		PermissionOrdersRefund, PermissionProductsRead, PermissionProductsCreate,
 		PermissionProductsUpdate, PermissionReturnsApprove, PermissionTicketsRead,
 		PermissionTicketsUpdate, PermissionApprovalsRead,
+		// Payment methods - manager can view for support context
+		PermissionPaymentsMethodsView,
 	},
 	"member": {
 		// Member can do basic operations
