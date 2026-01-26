@@ -140,6 +140,7 @@ const (
 	PermissionCustomersEdit   = "customers:edit"
 	PermissionCustomersDelete = "customers:delete"
 	PermissionCustomersExport = "customers:export"
+	PermissionCustomersLock   = "customers:lock" // Lock/unlock customer accounts
 )
 
 // Tickets permissions
@@ -372,6 +373,8 @@ var RoleToPermissions = map[string][]string{
 		// Approval permissions - owner can manage all approvals
 		PermissionApprovalsManage, PermissionApprovalsRead, PermissionApprovalsCreate,
 		PermissionApprovalsApprove, PermissionApprovalsReject,
+		// Customer lock permission
+		PermissionCustomersLock,
 	},
 	"admin": {
 		// Admin has most permissions except billing
@@ -380,6 +383,8 @@ var RoleToPermissions = map[string][]string{
 		PermissionCustomersAll, PermissionAnalyticsAll,
 		// Approval permissions - admin can approve and reject
 		PermissionApprovalsRead, PermissionApprovalsApprove, PermissionApprovalsReject,
+		// Customer lock permission
+		PermissionCustomersLock,
 	},
 	"manager": {
 		// Manager can manage day-to-day operations
