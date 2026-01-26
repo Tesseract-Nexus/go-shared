@@ -399,6 +399,9 @@ var RoleToPermissions = map[string][]string{
 		PermissionCustomersLock,
 		// Payment methods - admin can view, enable/disable, and test (NOT configure credentials)
 		PermissionPaymentsMethodsView, PermissionPaymentsMethodsEnable, PermissionPaymentsMethodsTest,
+		// Settings and storefront permissions - admin can modify store settings and themes
+		PermissionSettingsRead, PermissionSettingsUpdate,
+		PermissionStorefrontsRead, PermissionStorefrontsUpdate,
 	},
 	"manager": {
 		// Manager can manage day-to-day operations
@@ -408,6 +411,9 @@ var RoleToPermissions = map[string][]string{
 		PermissionTicketsUpdate, PermissionApprovalsRead,
 		// Payment methods - manager can view for support context
 		PermissionPaymentsMethodsView,
+		// Settings and storefront permissions - manager can modify store settings and themes
+		PermissionSettingsRead, PermissionSettingsUpdate,
+		PermissionStorefrontsRead, PermissionStorefrontsUpdate,
 	},
 	"member": {
 		// Member can do basic operations
