@@ -179,6 +179,63 @@ func (c *PaymentSecretClient) GetAllProviderCredentials(
 	return credentials, nil
 }
 
+// GetDynamicCredentials retrieves credentials using dynamic key names.
+// This is useful when integrating new payment gateways without modifying the go-shared package.
+// The keyNames should match the keys used when provisioning the secrets.
+//
+// Usage example:
+//
+//	creds, err := client.GetDynamicCredentials(ctx, env, tenantID, vendorID, "phonepe", []string{"merchant_id", "salt_key", "salt_index"})
+func (c *PaymentSecretClient) GetDynamicCredentials(
+	ctx context.Context,
+	env, tenantID, vendorID string,
+	provider string,
+	keyNames []string,
+) (map[string]string, error) {
+	if len(keyNames) == 0 {
+		return nil, fmt.Errorf("no key names provided")
+	}
+
+	credentials := make(map[string]string)
+
+	for _, keyName := range keyNames {
+		// Convert string provider and keyName to typed values
+		// The types are just strings underneath, so this is safe
+		typedProvider := PaymentProvider(provider)
+		typedKeyName := PaymentKeyName(keyName)
+
+		value, err := c.GetPaymentSecretWithFallback(ctx, env, tenantID, vendorID, typedProvider, typedKeyName)
+		if err != nil {
+			// Return error for required credentials
+			// Callers can decide whether keys are required or optional
+			c.logger.WithFields(logrus.Fields{
+				"env":       env,
+				"tenant_id": tenantID,
+				"vendor_id": vendorID,
+				"provider":  provider,
+				"key_name":  keyName,
+			}).Debug("credential not found")
+			continue // Skip missing keys rather than failing
+		}
+		credentials[keyName] = value
+	}
+
+	if len(credentials) == 0 {
+		return nil, fmt.Errorf("%w: provider=%s has no credentials configured", ErrPaymentProviderNotConfigured, provider)
+	}
+
+	c.logger.WithFields(logrus.Fields{
+		"env":             env,
+		"tenant_id":       tenantID,
+		"vendor_id":       vendorID,
+		"provider":        provider,
+		"keys_found":      len(credentials),
+		"keys_requested":  len(keyNames),
+	}).Debug("retrieved dynamic credentials")
+
+	return credentials, nil
+}
+
 // InvalidateCache removes a specific secret from the cache.
 // Call this when you know a secret has been updated.
 func (c *PaymentSecretClient) InvalidateCache(env, tenantID, vendorID string, provider PaymentProvider, keyName PaymentKeyName) {
