@@ -98,12 +98,19 @@ func (m *Middleware) RequirePermission(permission string) gin.HandlerFunc {
 		// Build context with auth token and user email for staff lookup
 		ctx := m.buildContext(c)
 
-		allowed, err := m.client.CheckPermission(ctx, tenantID, vendorID, staffID, permission)
+		// Get effective permissions (includes priority) for both permission check and setting context
+		permissions, err := m.client.GetEffectivePermissions(ctx, tenantID, vendorID, staffID)
 		if err != nil {
 			m.logPermissionDenied(c, permission, "failed to check permission: "+err.Error())
 			m.forbidden(c, "Failed to verify permissions", permission, nil)
 			return
 		}
+
+		// Set user_priority in context for use by handlers (e.g., approval workflows)
+		c.Set("user_priority", permissions.Priority)
+
+		// Store Owner (priority 100) has unrestricted access to all permissions
+		allowed := permissions.Priority >= PriorityStoreOwner || m.client.hasPermission(permissions, permission)
 
 		if !allowed {
 			m.logPermissionDenied(c, permission, "permission denied")
