@@ -41,6 +41,12 @@ const (
 	PaymentFailed    = "payment.failed"
 	PaymentRefunded  = "payment.refunded"
 
+	// Payment config events (admin configuration changes)
+	PaymentConfigUpdated  = "payment_config.updated"  // Payment method config changed
+	PaymentConfigEnabled  = "payment_config.enabled"  // Payment method enabled
+	PaymentConfigDisabled = "payment_config.disabled" // Payment method disabled
+	PaymentConfigTested   = "payment_config.tested"   // Payment method connection tested
+
 	// Customer events
 	CustomerRegistered = "customer.registered"
 	CustomerCreated    = "customer.created"
@@ -201,8 +207,9 @@ const (
 
 // NATS stream names
 const (
-	StreamOrders       = "ORDER_EVENTS"
-	StreamPayments     = "PAYMENT_EVENTS"
+	StreamOrders         = "ORDER_EVENTS"
+	StreamPayments       = "PAYMENT_EVENTS"
+	StreamPaymentConfigs = "PAYMENT_CONFIG_EVENTS"
 	StreamCustomers    = "CUSTOMER_EVENTS"
 	StreamAuth         = "AUTH_EVENTS"
 	StreamInventory    = "INVENTORY_EVENTS"
@@ -971,6 +978,9 @@ func GetStreamForSubject(subject string) string {
 	}
 	if strings.HasPrefix(subject, "payment.") {
 		return StreamPayments
+	}
+	if strings.HasPrefix(subject, "payment_config.") {
+		return StreamPaymentConfigs
 	}
 	if strings.HasPrefix(subject, "customer.") {
 		return StreamCustomers
@@ -2301,6 +2311,81 @@ func (e *DomainEvent) GetStream() string {
 // NewDomainEvent creates a new domain event with base fields populated
 func NewDomainEvent(eventType, tenantID string) *DomainEvent {
 	return &DomainEvent{
+		BaseEvent: BaseEvent{
+			EventType: eventType,
+			TenantID:  tenantID,
+			Timestamp: time.Now().UTC(),
+		},
+		Metadata: make(map[string]interface{}),
+	}
+}
+
+// PaymentConfigEvent represents a payment configuration change event
+// Used to sync payment method configurations between orders-service and payment-service
+type PaymentConfigEvent struct {
+	BaseEvent
+
+	// Payment method identification
+	PaymentMethodCode string `json:"paymentMethodCode"` // e.g., "stripe", "razorpay", "paypal"
+	Provider          string `json:"provider"`          // e.g., "Stripe", "Razorpay", "PayPal"
+	GatewayType       string `json:"gatewayType"`       // Mapped gateway type for payment-service
+
+	// Configuration status
+	IsEnabled  bool `json:"isEnabled"`
+	IsTestMode bool `json:"isTestMode"`
+
+	// Encrypted credentials (for sync to payment-service)
+	// These are already encrypted using go-shared/security/encryption
+	CredentialsEncrypted string `json:"credentialsEncrypted,omitempty"`
+
+	// Decrypted credential hints (for logging/debugging - NEVER contains full secrets)
+	APIKeyPublicHint   string `json:"apiKeyPublicHint,omitempty"`   // e.g., "pk_live_****abc"
+	WebhookSecretHint  string `json:"webhookSecretHint,omitempty"`  // e.g., "whsec_****xyz"
+
+	// Settings
+	DisplayName     string   `json:"displayName,omitempty"`
+	CheckoutMessage string   `json:"checkoutMessage,omitempty"`
+	DisplayOrder    int      `json:"displayOrder,omitempty"`
+	EnabledRegions  []string `json:"enabledRegions,omitempty"`
+
+	// Test result (for tested events)
+	TestSuccess bool   `json:"testSuccess,omitempty"`
+	TestMessage string `json:"testMessage,omitempty"`
+	TestError   string `json:"testError,omitempty"`
+
+	// Actor info
+	ChangedBy     string `json:"changedBy,omitempty"`
+	ChangedByName string `json:"changedByName,omitempty"`
+	ChangedByIP   string `json:"changedByIP,omitempty"`
+
+	// Metadata
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// Validate validates the payment config event
+func (e *PaymentConfigEvent) Validate() error {
+	if err := e.BaseEvent.Validate(); err != nil {
+		return err
+	}
+	if e.PaymentMethodCode == "" {
+		return fmt.Errorf("payment method code is required")
+	}
+	return nil
+}
+
+// GetSubject returns the NATS subject for this event
+func (e *PaymentConfigEvent) GetSubject() string {
+	return e.EventType
+}
+
+// GetStream returns the NATS stream name for this event
+func (e *PaymentConfigEvent) GetStream() string {
+	return StreamPaymentConfigs
+}
+
+// NewPaymentConfigEvent creates a new payment config event with base fields populated
+func NewPaymentConfigEvent(eventType, tenantID string) *PaymentConfigEvent {
+	return &PaymentConfigEvent{
 		BaseEvent: BaseEvent{
 			EventType: eventType,
 			TenantID:  tenantID,
