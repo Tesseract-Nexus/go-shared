@@ -2,7 +2,6 @@ package rbac
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -406,14 +405,10 @@ func (m *Middleware) AuditLog(action, entityType string) gin.HandlerFunc {
 func (m *Middleware) extractContext(c *gin.Context) (tenantID string, vendorID *string, staffID uuid.UUID) {
 	// Get tenant_id from gin context (set by auth middleware)
 	tenantID = c.GetString("tenant_id")
-	contextTenantID := tenantID // Save for debug logging
 	// Fallback to Istio JWT claim header (set by Istio or BFF)
 	if tenantID == "" {
 		tenantID = c.GetHeader("x-jwt-claim-tenant-id")
 	}
-	// DEBUG: Log tenant_id extraction (TEMPORARY)
-	log.Printf("[RBAC-DEBUG] extractContext: path=%s context_tenant=%q header_tenant=%q final_tenant=%q",
-		c.Request.URL.Path, contextTenantID, c.GetHeader("x-jwt-claim-tenant-id"), tenantID)
 
 	vendorIDStr := c.GetString("vendor_id")
 	// Fallback to Istio JWT claim header for vendor
