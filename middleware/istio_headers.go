@@ -460,6 +460,13 @@ func VendorScopeFilter() gin.HandlerFunc {
 			return
 		}
 
+		// Tenant-level roles should NOT have vendor filtering applied
+		// even if their JWT contains a vendor_id claim (e.g. staff who are also vendor owners)
+		if isTenantLevelRole(c) {
+			c.Next()
+			return
+		}
+
 		// Check if user has vendor-scoped role (has a vendor_id claim)
 		vendorID := GetIstioVendorID(c)
 		if vendorID != "" {
@@ -470,6 +477,40 @@ func VendorScopeFilter() gin.HandlerFunc {
 
 		c.Next()
 	}
+}
+
+// isTenantLevelRole checks if the user has a tenant-level role that should bypass vendor filtering
+// Tenant-level roles: owner, store_owner, super_admin, admin, manager
+// These users should see all vendors in their tenant, not be restricted to one vendor
+func isTenantLevelRole(c *gin.Context) bool {
+	tenantLevelRoles := map[string]bool{
+		"owner":       true,
+		"store_owner": true,
+		"super_admin": true,
+		"admin":       true,
+		"manager":     true,
+	}
+
+	if authCtx := GetAuthContext(c); authCtx != nil {
+		for _, role := range authCtx.Roles {
+			if tenantLevelRoles[strings.ToLower(role)] {
+				return true
+			}
+		}
+	}
+
+	// Also check from gin context (set by legacy auth)
+	if roles, exists := c.Get("roles"); exists {
+		if roleList, ok := roles.([]string); ok {
+			for _, role := range roleList {
+				if tenantLevelRoles[strings.ToLower(role)] {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
 }
 
 // GetVendorScopeFilter returns the vendor ID that should be used to filter data
