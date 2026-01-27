@@ -10,6 +10,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// InternalServiceHeader is the header used for internal service-to-service authentication
+// Services within the Kubernetes cluster can set this header to bypass user authentication
+const InternalServiceHeader = "X-Internal-Service"
+
 // IstioAuthConfig configures the Istio auth middleware behavior
 type IstioAuthConfig struct {
 	// RequireAuth returns 401 if no valid JWT claims are present
@@ -19,6 +23,11 @@ type IstioAuthConfig struct {
 	// AllowLegacyHeaders allows X-User-ID etc. headers when Istio headers are not present
 	// Used during migration period
 	AllowLegacyHeaders bool
+
+	// AllowInternalServiceCalls allows requests with X-Internal-Service header to bypass user auth
+	// Internal services must still provide X-Tenant-ID for tenant context
+	// Default: true (for backward compatibility with existing service-to-service calls)
+	AllowInternalServiceCalls bool
 
 	// SkipPaths is a list of path prefixes that bypass authentication
 	// Used for internal service-to-service endpoints that don't have JWT tokens
@@ -171,6 +180,21 @@ func IstioAuth(config IstioAuthConfig) gin.HandlerFunc {
 		}
 
 		// No Istio auth headers present
+		// Check for internal service call first (allows service-to-service without user JWT)
+		if c.GetHeader(InternalServiceHeader) != "" {
+			// Internal service calls bypass user authentication
+			// but still need tenant context from X-Tenant-ID header
+			if tenantID := c.GetHeader("X-Tenant-ID"); tenantID != "" {
+				c.Set("tenant_id", tenantID)
+			}
+			if tenantSlug := c.GetHeader("X-Tenant-Slug"); tenantSlug != "" {
+				c.Set("tenant_slug", tenantSlug)
+			}
+			c.Set("is_internal_service", true)
+			c.Next()
+			return
+		}
+
 		if config.RequireAuth && !config.AllowLegacyHeaders {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"error":   "unauthorized",

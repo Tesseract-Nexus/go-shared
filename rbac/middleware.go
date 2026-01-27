@@ -63,6 +63,11 @@ type AuditLogger interface {
 	Log(entry *AuditLogEntry) error
 }
 
+// InternalServiceHeader is the header name for internal service-to-service calls
+// When this header is present, RBAC permission checks can be bypassed for certain endpoints
+// This header should only be set by trusted internal services within the Kubernetes cluster
+const InternalServiceHeader = "X-Internal-Service"
+
 // Middleware provides RBAC-based authorization middleware for Gin
 type Middleware struct {
 	client      *Client
@@ -83,6 +88,35 @@ func NewMiddlewareWithURL(staffServiceURL string, auditLogger AuditLogger) *Midd
 		client:      NewClient(staffServiceURL),
 		auditLogger: auditLogger,
 	}
+}
+
+// isInternalServiceCall checks if the request is from a trusted internal service
+// Internal services set the X-Internal-Service header when making service-to-service calls
+// These calls bypass user-level RBAC checks but still require tenant context
+func isInternalServiceCall(c *gin.Context) bool {
+	return c.GetHeader(InternalServiceHeader) != ""
+}
+
+// AllowInternalService wraps a permission middleware to allow internal service calls to bypass RBAC
+// Internal services must still provide X-Tenant-ID header for tenant isolation
+// This is used for service-to-service calls where there's no user context (e.g., guest checkout)
+func AllowInternalService(next gin.HandlerFunc) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if isInternalServiceCall(c) {
+			// Internal service calls bypass user permission checks
+			// but tenant context is still enforced by the service handlers
+			c.Next()
+			return
+		}
+		// Not an internal call, use the original permission check
+		next(c)
+	}
+}
+
+// RequirePermissionAllowInternal combines permission check with internal service bypass
+// Use this for endpoints that need RBAC for users but should allow internal service calls
+func (m *Middleware) RequirePermissionAllowInternal(permission string) gin.HandlerFunc {
+	return AllowInternalService(m.RequirePermission(permission))
 }
 
 // RequirePermission middleware that requires a specific permission
